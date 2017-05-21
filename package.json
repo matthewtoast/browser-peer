@@ -1,0 +1,19 @@
+{
+  "name": "browser-peer",
+  "version": "1.0.0",
+  "description": "Minimal browser harness for simple-peer",
+  "repository": "https://github.com/matthewtoast/browser-peer",
+  "main": "index.js",
+  "scripts": {
+    "start": "watchify index.js -s BrowserPeer -o index.bundle.js & serve . & open http://localhost:5000"
+  },
+  "author": "Matthew Trost <matthew@trost.co>",
+  "license": "ISC",
+  "devDependencies": {
+    "serve": "^5.1.5",
+    "watchify": "^3.9.0"
+  },
+  "dependencies": {
+    "simple-peer": "^8.1.0"
+  }
+}

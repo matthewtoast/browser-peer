@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"> 
+  <title>browser-peer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css">
+  <style>#message{ font-family: monospace; font-size: 12px; text-align: center; padding: 4px; }</style>
+</head>
+<body>
+  <div id="mount"></div>
+  <div id="message"></div>
+  <script src="./index.bundle.js"></script>
+  <script>
+    BrowserPeer(document.getElementById('mount'), {}, function (err, instance) {
+      instance.peer.on('connect', function _peerConnect () {
+        instance.peer.message({ foo: Math.random(), bar: Math.random(), baz: Math.random() })
+      })
+      instance.peer.on('message', function _peerData (payload) {
+        console.log('[BrowserPeer] received message:', payload)
+        document.getElementById('message').textContent = JSON.stringify(payload)
+      })
+    })
+  </script>
+</body>
+</html>
