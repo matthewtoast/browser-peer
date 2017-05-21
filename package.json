@@ -1,6 +1,6 @@
 {
   "name": "browser-peer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Minimal browser harness for simple-peer",
   "repository": "https://github.com/matthewtoast/browser-peer",
   "main": "index.js",

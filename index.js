@@ -188,6 +188,7 @@ function BrowserPeer ($mount, options, cb) {
 
     host.on('close', function _hostClose () {
       instance.isConnected = false
+      clearInterval(instance.heartbeatInterval)
       if (options.onClose) options.onClose(instance)
       if (!options.quiet) console.info('[BrowserPeer|host] connection closed')
       appendMessage($mount, options.guestConnectionClosedText)
@@ -195,6 +196,7 @@ function BrowserPeer ($mount, options, cb) {
 
     host.on('error', function _hostError (error) {
       if (options.onError) options.onError(instance, error)
+      clearInterval(instance.heartbeatInterval)
       console.error(error)
       appendMessage($mount, error.message)
     })
@@ -302,6 +304,7 @@ function BrowserPeer ($mount, options, cb) {
 
     guest.on('close', function _guestClose () {
       instance.isConnected = false
+      clearInterval(instance.heartbeatInterval)
       if (options.onClose) options.onClose(instance)
       if (!options.quiet) console.info('[BrowserPeer|guest] connection closed')
       appendMessage($mount, options.hostConnectionClosedText)
@@ -309,6 +312,7 @@ function BrowserPeer ($mount, options, cb) {
 
     guest.on('error', function _guestError (error) {
       if (options.onError) options.onError(instance, error)
+      clearInterval(instance.heartbeatInterval)
       console.error(error)
       appendMessage($mount, error.message)
     })
