@@ -1,6 +1,9 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.BrowserPeer = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var Peer = require('simple-peer')
 
+var DELAY = 250
+var HEARTBEAT = 1000
+
 var DEFAULTS = {
   peerOptions: {
     trickle: false
@@ -127,7 +130,7 @@ function BrowserPeer ($mount, options, cb) {
     var peerOptions = assignDefaults({ initiator: true }, options.peerOptions)
     var host = new Peer(peerOptions)
     if (!options.quiet) console.info('[BrowserPeer|host] options:', peerOptions)
-    var instance = { peer: host, element: $mount, isHost: true, isGuest: false, options: peerOptions }
+    var instance = { peer: host, element: $mount, isHost: true, isGuest: false, options: peerOptions, isConnected: false }
 
     host.on('signal', function _hostSignalReceive (signal) {
       if (options.onSignal) options.onSignal(instance, signal)
@@ -171,18 +174,27 @@ function BrowserPeer ($mount, options, cb) {
     })
 
     host.on('connect', function _hostConnect () {
+      instance.isConnected = true
       if (options.onConnect) options.onConnect(instance)
       if (!options.quiet) console.info('[BrowserPeer|host] received connection')
       appendMessage($mount, options.guestConnectionEstablishedText)
+
+      // HACK: Work around for guest not firing connect event - send them a message to force it.
+      // Timeout required due to a race condition I don't fully understand
+      var heartbeats = 0
+      instance.heartbeatInterval = setInterval(function _timeout () {
+        host.message({ heartbeat: heartbeats++ })
+      }, HEARTBEAT)
     })
 
-    host.on('close', function _guestConnect () {
+    host.on('close', function _hostClose () {
+      instance.isConnected = false
       if (options.onClose) options.onClose(instance)
       if (!options.quiet) console.info('[BrowserPeer|host] connection closed')
       appendMessage($mount, options.guestConnectionClosedText)
     })
 
-    host.on('error', function _peerError (error) {
+    host.on('error', function _hostError (error) {
       if (options.onError) options.onError(instance, error)
       console.error(error)
       appendMessage($mount, error.message)
@@ -192,7 +204,11 @@ function BrowserPeer ($mount, options, cb) {
       return host.send(JSON.stringify(object))
     }
 
-    host.on('data', function _peerData (buffer) {
+    host.on('data', function _hostData (buffer) {
+      if (!instance.isConnected) { // HACK: Workaround for not receiving connect event bug
+        host.emit('connect')
+      }
+
       if (options.onData) options.onData(instance, buffer)
       var string = buffer.toString()
       try {
@@ -224,7 +240,7 @@ function BrowserPeer ($mount, options, cb) {
     var peerOptions = assignDefaults({ initiator: false }, options.peerOptions)
     if (!options.quiet) console.info('[BrowserPeer|guest] options:', peerOptions)
     var guest = new Peer(peerOptions)
-    var instance = { peer: guest, element: $mount, isHost: false, isGuest: true, options: peerOptions }
+    var instance = { peer: guest, element: $mount, isHost: false, isGuest: true, options: peerOptions, isConnected: false }
 
     var $join = document.createElement('input')
     applyStyle($join, options.inputStyle)
@@ -269,23 +285,30 @@ function BrowserPeer ($mount, options, cb) {
 
           $mount.appendChild($finalizelabel)
           $mount.appendChild($finalize)
-        }, 250)
+        }, DELAY)
       }
     })
 
     guest.on('connect', function _guestConnect () {
+      instance.isConnected = true
       if (options.onConnect) options.onConnect(instance)
       if (!options.quiet) console.info('[BrowserPeer|guest] received connection')
       appendMessage($mount, options.hostConnectionEstablishedText)
+
+      var heartbeats = 0
+      instance.heartbeatInterval = setInterval(function _timeout () {
+        guest.message({ heartbeat: heartbeats++ })
+      }, HEARTBEAT)
     })
 
-    guest.on('close', function _guestConnect () {
+    guest.on('close', function _guestClose () {
+      instance.isConnected = false
       if (options.onClose) options.onClose(instance)
       if (!options.quiet) console.info('[BrowserPeer|guest] connection closed')
       appendMessage($mount, options.hostConnectionClosedText)
     })
 
-    guest.on('error', function _peerError (error) {
+    guest.on('error', function _guestError (error) {
       if (options.onError) options.onError(instance, error)
       console.error(error)
       appendMessage($mount, error.message)
@@ -295,7 +318,11 @@ function BrowserPeer ($mount, options, cb) {
       return guest.send(JSON.stringify(object))
     }
 
-    guest.on('data', function _peerData (buffer) {
+    guest.on('data', function _guestData (buffer) {
+      if (!instance.isConnected) { // HACK: Workaround for not receiving connect event bug
+        guest.emit('connect')
+      }
+
       if (options.onData) options.onData(instance, buffer)
       var string = buffer.toString()
       try {

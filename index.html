@@ -13,9 +13,6 @@
   <script src="./index.bundle.js"></script>
   <script>
     BrowserPeer(document.getElementById('mount'), {}, function (err, instance) {
-      instance.peer.on('connect', function _peerConnect () {
-        instance.peer.message({ foo: Math.random(), bar: Math.random(), baz: Math.random() })
-      })
       instance.peer.on('message', function _peerData (payload) {
         console.log('[BrowserPeer] received message:', payload)
         document.getElementById('message').textContent = JSON.stringify(payload)
